@@ -3,6 +3,7 @@ import React from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { AuthProvider } from './src/context/AuthContext';
+import { GameProvider } from './src/context/GameProvider';
 import RootNavigator from './src/navigation/RootNavigator';
 import { navigationRef } from './src/services/navigation';
 import { View, Text, StyleSheet, Platform } from 'react-native';
@@ -118,19 +119,22 @@ const AppContent: React.FC = () => {
   return <RootNavigator />;
 };
 
+const AppWithProviders = () => (
+  <SafeAreaProvider>
+    <AuthProvider>
+      <GameProvider>
+        <NavigationContainer ref={navigationRef} theme={CustomTheme}>
+          <AppContent />
+        </NavigationContainer>
+      </GameProvider>
+    </AuthProvider>
+  </SafeAreaProvider>
+);
+
 export default function App() {
   return (
     <ErrorBoundary>
-      <SafeAreaProvider>
-        <AuthProvider>
-          <NavigationContainer 
-            ref={navigationRef}
-            theme={CustomTheme}
-          >
-            <AppContent />
-          </NavigationContainer>
-        </AuthProvider>
-      </SafeAreaProvider>
+      <AppWithProviders />
     </ErrorBoundary>
   );
 }
