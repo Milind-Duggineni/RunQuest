@@ -1,0 +1,267 @@
+import React, { memo, useMemo, useState, useEffect } from 'react';
+import { View, Image, Text, StyleSheet, ImageSourcePropType } from 'react-native';
+
+// Types
+interface TilePosition {
+  id: number;
+  tileId: number;
+  sourceX: number;
+  sourceY: number;
+  renderX: number;
+  renderY: number;
+  width: number;
+  height: number;
+}
+
+interface TiledMapLayer {
+  data: number[];
+  height: number;
+  id: number;
+  name: string;
+  opacity: number;
+  type: string;
+  visible: boolean;
+  width: number;
+  x: number;
+  y: number;
+}
+
+interface TiledTileset {
+  columns: number;
+  firstgid: number;
+  image: string;
+  imageheight: number;
+  imagewidth: number;
+  margin: number;
+  name: string;
+  spacing: number;
+  tilecount: number;
+  tileheight: number;
+  tilewidth: number;
+}
+
+interface TiledMapData {
+  height: number;
+  layers: TiledMapLayer[];
+  nextlayerid: number;
+  nextobjectid: number;
+  orientation: string;
+  renderorder: string;
+  tiledversion: string;
+  tileheight: number;
+  tilesets: TiledTileset[];
+  tilewidth: number;
+  type: string;
+  version: string;
+  width: number;
+}
+
+interface MapRendererProps {
+  mapData: TiledMapData;
+  tilesetImage: ImageSourcePropType;
+}
+
+// Styles
+const styles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    overflow: 'hidden',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#1a1a1a',
+    padding: 20,
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  debugOverlay: {
+    position: 'absolute',
+    bottom: 10,
+    left: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    padding: 8,
+    borderRadius: 4,
+  },
+  debugText: {
+    color: 'white',
+    fontSize: 12,
+  },
+  debugRow: {
+    flexDirection: 'row',
+    marginBottom: 4,
+  },
+  debugLabel: {
+    fontWeight: 'bold',
+    marginRight: 4,
+  },
+  debugValue: {
+    flex: 1,
+  },
+});
+
+const MapRenderer: React.FC<MapRendererProps> = ({
+  mapData,
+  tilesetImage,
+}) => {
+  // Extract data from map
+  const { layers, tilesets, width: widthInTiles, height: heightInTiles, tilewidth: tileSize } = mapData;
+  
+  // Validate map data
+  if (!tilesets || tilesets.length === 0) {
+    return (
+      <View style={[styles.errorContainer, { width: 300, height: 300 }]}>
+        <Text style={styles.errorText}>Error: No tilesets found in map data</Text>
+      </View>
+    );
+  }
+  
+  const tileset = tilesets[0];
+  const tilesetColumns = tileset.columns || 1;
+  const tilesetImageWidth = tileset.imagewidth || 0;
+  const tilesetImageHeight = tileset.imageheight || 0;
+  const firstGid = tileset.firstgid || 1;
+  
+  // Get the first tile layer
+  const tileLayer = layers?.find(layer => layer.type === 'tilelayer');
+  
+  const [imageLoadError, setImageLoadError] = useState(false);
+  const [tilesetUri, setTilesetUri] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!tilesetImage) {
+      setImageLoadError(true);
+      return;
+    }
+
+    const setImageSource = (uri: string) => {
+      setTilesetUri(uri);
+      Image.getSize(
+        uri,
+        () => setImageLoadError(false),
+        () => setImageLoadError(true)
+      );
+    };
+
+    try {
+      if (typeof tilesetImage === 'number') {
+        const source = Image.resolveAssetSource(tilesetImage);
+        if (source?.uri) {
+          setImageSource(source.uri);
+        }
+      } else if (typeof tilesetImage === 'string') {
+        setImageSource(tilesetImage);
+      } else if (tilesetImage && typeof tilesetImage === 'object') {
+        const source = Image.resolveAssetSource(tilesetImage);
+        if (source?.uri) {
+          setImageSource(source.uri);
+        }
+      }
+    } catch (error) {
+      console.error('Error processing image source:', error);
+      setImageLoadError(true);
+    }
+  }, [tilesetImage]);
+
+  const tileData = useMemo(() => {
+    if (!tileLayer?.data?.length) return [];
+    
+    return tileLayer.data
+      .map((tileId, index) => {
+        if (tileId === 0) return null;
+        
+        const adjustedTileId = tileId - firstGid;
+        const row = Math.floor(index / widthInTiles);
+        const col = index % widthInTiles;
+        const tileRow = Math.floor(adjustedTileId / tilesetColumns);
+        const tileCol = adjustedTileId % tilesetColumns;
+        const sourceX = tileCol * tileSize;
+        const sourceY = tileRow * tileSize;
+        
+        return {
+          id: index,
+          tileId: adjustedTileId,
+          sourceX,
+          sourceY,
+          renderX: col * tileSize,
+          renderY: row * tileSize,
+          width: tileSize,
+          height: tileSize,
+        };
+      })
+      .filter(Boolean) as TilePosition[];
+  }, [tileLayer, widthInTiles, tileSize, tilesetColumns, firstGid]);
+
+  if (!tileLayer || !tileLayer.data || !tilesetUri || imageLoadError) {
+    return (
+      <View style={[styles.errorContainer, { width: widthInTiles * tileSize, height: heightInTiles * tileSize }]}>
+        <Text style={styles.errorText}>
+          {!tileLayer ? 'No tile layer found' : !tilesetUri ? 'Tileset not loaded' : 'Error loading tileset image'}
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={[styles.container, { width: widthInTiles * tileSize, height: heightInTiles * tileSize }]}>
+      {tileData.map((tile) => (
+        <View
+          key={`tile-${tile.id}`}
+          style={{
+            position: 'absolute',
+            width: tile.width,
+            height: tile.height,
+            left: tile.renderX,
+            top: tile.renderY,
+            overflow: 'hidden',
+          }}
+        >
+          <Image
+            source={{ uri: tilesetUri }}
+            style={{
+              width: tilesetImageWidth,
+              height: tilesetImageHeight,
+              marginLeft: -tile.sourceX,
+              marginTop: -tile.sourceY,
+            }}
+            onError={() => setImageLoadError(true)}
+            resizeMode="stretch"
+          />
+        </View>
+      ))}
+      
+      {__DEV__ && (
+        <View style={styles.debugOverlay}>
+          <Text style={[styles.debugText, { fontWeight: 'bold', marginBottom: 4 }]}>
+            🗺️ Map Debug
+          </Text>
+          <View style={styles.debugRow}>
+            <Text style={[styles.debugText, styles.debugLabel]}>Tiles:</Text>
+            <Text style={[styles.debugText, styles.debugValue]}>{tileData.length} rendered</Text>
+          </View>
+          <View style={styles.debugRow}>
+            <Text style={[styles.debugText, styles.debugLabel]}>Map Size:</Text>
+            <Text style={[styles.debugText, styles.debugValue]}>{widthInTiles}x{heightInTiles} tiles</Text>
+          </View>
+          <View style={styles.debugRow}>
+            <Text style={[styles.debugText, styles.debugLabel]}>Tile Size:</Text>
+            <Text style={[styles.debugText, styles.debugValue]}>{tileSize}px</Text>
+          </View>
+          <View style={styles.debugRow}>
+            <Text style={[styles.debugText, styles.debugLabel]}>Tileset:</Text>
+            <Text style={[styles.debugText, styles.debugValue]}>{tilesetImageWidth}x{tilesetImageHeight}px</Text>
+          </View>
+        </View>
+      )}
+    </View>
+  );
+};
+
+export default memo(MapRenderer);

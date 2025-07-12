@@ -1,0 +1,32 @@
+/* Nativewind CSS */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom base styles */
+@layer base {
+  /* Add any custom base styles here */
+  body {
+    @apply bg-white dark:bg-gray-900 text-gray-900 dark:text-white;
+  }
+}
+
+/* Custom component classes */
+@layer components {
+  /* Add any custom component classes here */
+  .btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-colors duration-200;
+  }
+  
+  .btn-primary {
+    @apply bg-blue-500 hover:bg-blue-600 text-white;
+  }
+}
+
+/* Custom utilities */
+@layer utilities {
+  /* Add any custom utilities here */
+  .text-shadow {
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+  }
+}

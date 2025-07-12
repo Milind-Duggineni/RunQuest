@@ -1,0 +1,41 @@
+const { getDefaultConfig } = require('expo/metro-config');
+const { withNativeWind } = require('nativewind/metro');
+const path = require('path');
+
+// Get the default Metro config
+const config = getDefaultConfig(__dirname);
+
+// Add support for image files
+config.resolver.assetExts = [
+  ...config.resolver.assetExts.filter(ext => !['tmj'].includes(ext)),
+  'png',
+  'jpg',
+  'jpeg',
+  'gif',
+  'webp',
+  'svg',
+  'xml',
+  'ttf',
+  'otf',
+  'woff',
+  'woff2'
+];
+
+// Add support for source files
+config.resolver.sourceExts = [
+  ...config.resolver.sourceExts,
+  'tmj',
+  'ts',
+  'tsx',
+  'js',
+  'jsx',
+  'json',
+  'cjs',
+  'mjs'
+];
+
+// Apply Nativewind with minimal configuration
+module.exports = withNativeWind(config, {
+  input: './global.css',
+  projectRoot: __dirname,
+});

@@ -1,0 +1,21 @@
+const { transform } = require('@babel/core');
+const path = require('path');
+
+module.exports = {
+  process(src, filename) {
+    // Read the TMJ file as JSON
+    const json = JSON.parse(src);
+    
+    // Create a module that exports the JSON object
+    const result = `module.exports = ${JSON.stringify(json, null, 2)};`;
+    
+    // Return the transformed code
+    return {
+      code: result,
+    };
+  },
+  getCacheKey() {
+    // The cache key should be a unique identifier for this transformer
+    return 'tmj-transformer';
+  },
+};

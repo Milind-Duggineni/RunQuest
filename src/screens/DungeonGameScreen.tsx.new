@@ -1,0 +1,370 @@
+import React, { useState, useEffect, useRef, useCallback, ReactElement } from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  Dimensions, 
+  ActivityIndicator, 
+  Button,
+  StyleProp,
+  ViewStyle,
+  TextStyle
+} from 'react-native';
+import Matter from 'matter-js';
+import MapRenderer from '../game/components/MapRenderer';
+import { GameEntities } from '../game/types/game';
+
+// Import map data and assets
+import DungeonMapData from '../assets/catacombs.tmj.json';
+import DungeonTilesetImage from '../assets/catacombs_tileset.png';
+
+// Types
+type Direction = 'up' | 'down' | 'left' | 'right';
+
+interface GameEngineRef {
+  current: {
+    stop: () => void;
+    dispatch: (event: { type: string; [key: string]: any }) => void;
+  } | null;
+}
+
+// Define styles
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#000',
+  },
+  loadingText: {
+    color: '#fff',
+    marginTop: 10,
+    fontSize: 16,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#000',
+    padding: 20,
+  },
+  errorText: {
+    color: '#ff4444',
+    fontSize: 16,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  debugOverlay: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    padding: 10,
+    borderRadius: 5,
+  },
+  debugText: {
+    color: '#fff',
+    fontSize: 12,
+    marginBottom: 4,
+  },
+});
+
+const DungeonGameScreen = (): ReactElement => {
+  // State
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<Error | null>(null);
+  const [gameEntities, setGameEntities] = useState<GameEntities | null>(null);
+  
+  // Refs
+  const gameEngineRef = useRef<GameEngineRef['current']>(null);
+  const gameEntitiesRef = useRef<GameEntities | null>(null);
+  const moveInterval = useRef<NodeJS.Timeout | undefined>(undefined);
+  const currentMoveIndexRef = useRef<number>(0);
+  const directionRef = useRef<Direction>('down');
+  const moveSpeed = 500; // ms between moves
+  const gameLoop = useRef<NodeJS.Timeout | null>(null);
+  const isMounted = useRef<boolean>(true);
+
+  // Constants
+  const TILE_SIZE = DungeonMapData.tilewidth || 32;
+  const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+  
+  // Calculate map dimensions in pixels
+  const mapWidthPixels = (DungeonMapData.width || 20) * TILE_SIZE;
+  const mapHeightPixels = (DungeonMapData.height || 15) * TILE_SIZE;
+  const gameScale = Math.min(SCREEN_WIDTH / mapWidthPixels, SCREEN_HEIGHT / mapHeightPixels, 1);
+  const offsetX = (SCREEN_WIDTH - mapWidthPixels * gameScale) / 2;
+  const offsetY = (SCREEN_HEIGHT - mapHeightPixels * gameScale) / 2;
+
+  // Initialize game
+  const initGame = useCallback(async () => {
+    try {
+      console.log('Starting game initialization...');
+      setIsLoading(true);
+      
+      // Create physics engine
+      const engine = Matter.Engine.create({
+        gravity: { x: 0, y: 0 },
+        enableSleeping: false,
+      });
+      
+      // Create player
+      const playerBody = Matter.Bodies.circle(
+        (DungeonMapData.width * TILE_SIZE) / 2,
+        (DungeonMapData.height * TILE_SIZE) / 2,
+        TILE_SIZE / 2,
+        { 
+          isStatic: false, 
+          label: 'player',
+          friction: 0,
+          frictionAir: 0.05,
+          restitution: 0.2,
+          inertia: Infinity,
+          collisionFilter: {
+            group: 0,
+            category: 0x0002,
+            mask: 0xffffffff,
+          },
+        }
+      );
+
+      // Create camera focus
+      const cameraFocus = Matter.Bodies.rectangle(0, 0, 10, 10, {
+        isStatic: true,
+        isSensor: true,
+        label: 'cameraFocus',
+        render: { visible: false },
+      });
+
+      // Add bodies to world
+      Matter.Composite.add(engine.world, [playerBody, cameraFocus]);
+
+      // Create and start runner
+      const runner = Matter.Runner.create();
+      Matter.Runner.run(runner, engine);
+
+      // Set up collision detection
+      Matter.Events.on(engine, 'collisionStart', (event) => {
+        const { pairs } = event;
+        pairs.forEach((pair) => {
+          // Handle collisions here
+        });
+      });
+
+      // Create game entities
+      const tileset = DungeonMapData.tilesets?.[0] || { columns: 8, imagewidth: 256, imageheight: 256 };
+      const entities: GameEntities = {
+        map: {
+          tiles: [],
+          widthInTiles: DungeonMapData.width || 20,
+          heightInTiles: DungeonMapData.height || 15,
+          tileSize: TILE_SIZE,
+          tilesetImage: DungeonTilesetImage,
+          tilesetColumns: tileset.columns || 8,
+          tilesetImageWidth: tileset.imagewidth || 256,
+          tilesetImageHeight: tileset.imageheight || 256,
+          layers: DungeonMapData.layers || [],
+        },
+        player: {
+          body: playerBody,
+          size: { width: TILE_SIZE, height: TILE_SIZE },
+          frame: 0,
+          frameCount: 4,
+          direction: 'down',
+          velocity: { x: 0, y: 0 },
+        },
+        walls: [],
+        pedometer: {
+          lastProcessedRealWorldSteps: 0,
+          lastDirectionInput: 'down',
+          accumulatedPedometerSteps: 0,
+        },
+        physics: {
+          engine,
+          world: engine.world,
+          runner,
+        },
+        camera: {
+          focus: cameraFocus,
+        },
+      };
+
+      // Update refs and state
+      gameEntitiesRef.current = entities;
+      
+      if (isMounted.current) {
+        setGameEntities(entities);
+        setIsLoading(false);
+      }
+      
+      console.log('Game initialization complete!');
+
+      // Start game loop
+      gameLoop.current = setInterval(() => {
+        // Update game state here
+      }, 1000 / 60);
+
+      return () => {
+        if (gameLoop.current) {
+          clearInterval(gameLoop.current);
+        }
+        Matter.Runner.stop(runner);
+        Matter.Engine.clear(engine);
+      };
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Failed to initialize game');
+      console.error('Error initializing game:', error);
+      
+      if (isMounted.current) {
+        setError(error);
+        setIsLoading(false);
+      }
+      
+      throw error;
+    }
+  }, [TILE_SIZE]);
+
+  // Movement pattern
+  const movementPattern = useRef<{ x: number; y: number }[]>([
+    { x: 1, y: 0 },   // right
+    { x: 0, y: 1 },   // down
+    { x: -1, y: 0 },  // left
+    { x: 0, y: -1 },  // up
+  ]);
+
+  // Start movement pattern
+  const startMovement = useCallback(() => {
+    if (!gameEntitiesRef.current) return;
+
+    // Clear any existing interval
+    if (moveInterval.current) {
+      clearInterval(moveInterval.current);
+    }
+
+    // Start the movement pattern
+    moveInterval.current = setInterval(() => {
+      if (!gameEntitiesRef.current) return;
+      
+      const player = gameEntitiesRef.current.player;
+      if (!player) return;
+
+      const currentMove = movementPattern.current[currentMoveIndexRef.current];
+      const force = { x: currentMove.x * 5, y: currentMove.y * 5 };
+      
+      Matter.Body.setVelocity(player.body, force);
+      
+      // Update direction based on movement
+      if (currentMove.x > 0) directionRef.current = 'right';
+      else if (currentMove.x < 0) directionRef.current = 'left';
+      else if (currentMove.y > 0) directionRef.current = 'down';
+      else if (currentMove.y < 0) directionRef.current = 'up';
+
+      // Move to next pattern
+      currentMoveIndexRef.current = (currentMoveIndexRef.current + 1) % movementPattern.current.length;
+    }, moveSpeed);
+  }, [moveSpeed]);
+
+  // Initialize game on mount
+  useEffect(() => {
+    isMounted.current = true;
+    
+    const cleanup = initGame().catch(console.error);
+    
+    // Cleanup function
+    return () => {
+      isMounted.current = false;
+      
+      if (moveInterval.current) {
+        clearInterval(moveInterval.current);
+      }
+      
+      if (gameLoop.current) {
+        clearInterval(gameLoop.current);
+      }
+      
+      if (gameEngineRef.current) {
+        gameEngineRef.current.stop();
+      }
+      
+      if (gameEntitiesRef.current?.physics?.runner) {
+        Matter.Runner.stop(gameEntitiesRef.current.physics.runner);
+      }
+      
+      if (gameEntitiesRef.current?.physics?.engine) {
+        Matter.Engine.clear(gameEntitiesRef.current.physics.engine);
+      }
+      
+      if (typeof cleanup === 'function') {
+        cleanup();
+      }
+    };
+  }, [initGame]);
+
+  // Render loading state
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#ffffff" />
+        <Text style={styles.loadingText}>Initializing game...</Text>
+      </View>
+    );
+  }
+
+  // Render error state
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>Error: {error.message}</Text>
+        <Button
+          title="Retry"
+          onPress={() => {
+            setError(null);
+            initGame();
+          }}
+        />
+      </View>
+    );
+  }
+
+  // Render game when ready
+  if (gameEntities) {
+    return (
+      <View style={styles.container}>
+        <MapRenderer 
+          mapData={DungeonMapData} 
+          tilesetData={DungeonMapData.tilesets?.[0] || { columns: 8, imagewidth: 256, imageheight: 256 }}
+        />
+        <View style={styles.debugOverlay}>
+          <Text style={styles.debugText}>
+            Position: ({Math.round(gameEntities.player.body.position.x)}, {Math.round(gameEntities.player.body.position.y)})
+          </Text>
+          <Text style={styles.debugText}>
+            Direction: {directionRef.current}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  // Fallback in case of unexpected state
+  return (
+    <View style={styles.errorContainer}>
+      <Text style={styles.errorText}>Unexpected error occurred</Text>
+      <Button
+        title="Restart"
+        onPress={() => {
+          setError(null);
+          setGameEntities(null);
+          gameEntitiesRef.current = null;
+          initGame();
+        }}
+      />
+    </View>
+  );
+};
+
+export default DungeonGameScreen;
