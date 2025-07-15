@@ -16,7 +16,7 @@ import type { StackNavigationProp } from '@react-navigation/stack';
 import type { RootStackParamList } from '../navigation/types';
 
 const { width, height } = Dimensions.get('window');
-const image = require('../../assets/Background.jpg'); // Ensure this is a relevant background image for your welcome screen
+const image = require('../assets/Background.jpg');
 
 type Firefly = {
   position: Animated.ValueXY;
@@ -27,7 +27,6 @@ type WelcomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Welc
 
 const WelcomePage = () => {
   const navigation = useNavigation<WelcomeScreenNavigationProp>();
-  console.log('WelcomePage rendered');
   const fireflies = useRef<Firefly[]>(
     Array.from({ length: 15 }, () => ({
       position: new Animated.ValueXY({
@@ -72,37 +71,24 @@ const WelcomePage = () => {
     });
 
     return () => {
-      animationHandles.forEach(animation => animation.stop());
+      animationHandles.forEach((animation) => animation.stop());
     };
   }, [fireflies]);
 
-  // Handle "Start New Quest" to go to the SignUp page
   const handleStartNewQuest = async () => {
-    console.log('handleStartNewQuest called - Navigating to SignUp');
     try {
-      // Navigate to the SignUp screen for new users
-      await new Promise(resolve => setTimeout(resolve, 0)); // Small timeout for navigation queue
-      if (navigation) {
-        navigation.navigate('SignUp'); // Navigate to the SignUp screen
-        console.log('Navigation to SignUp should be complete');
-      } else {
-        console.error('Navigation object is not available');
-      }
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      navigation.navigate('SignUp');
     } catch (error) {
       console.error('Navigation error:', error);
     }
   };
 
-  // Handle "Continue Journey" to go to the SignIn page (remains the same)
   const handleContinue = () => {
-    console.log('Navigating to SignIn');
-    navigation.navigate('SignIn'); // Navigate to the SignIn screen
+    navigation.navigate('SignIn');
   };
 
   const handleSettings = () => {
-    console.log('Settings button pressed');
-    // TODO: Implement settings navigation or functionality
-    // Note: 'Settings' is not in the root navigator, it's in the Main navigator
     console.warn('Settings screen is not directly accessible from the Welcome screen without logging in first.');
   };
 
@@ -136,17 +122,11 @@ const WelcomePage = () => {
           </View>
 
           <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={styles.button}
-              onPress={handleStartNewQuest} // Now navigates to SignUp
-            >
+            <TouchableOpacity style={styles.button} onPress={handleStartNewQuest}>
               <Text style={styles.buttonText}>Start New Quest</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.button}
-              onPress={handleContinue} // Still navigates to SignIn
-            >
+            <TouchableOpacity style={styles.button} onPress={handleContinue}>
               <Text style={styles.buttonText}>Continue Journey</Text>
             </TouchableOpacity>
 
@@ -162,8 +142,6 @@ const WelcomePage = () => {
     </View>
   );
 };
-
-export default WelcomePage;
 
 const styles = StyleSheet.create({
   image: {
@@ -247,7 +225,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     textAlign: 'center',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 10,
   },
 });
+
+export default WelcomePage;

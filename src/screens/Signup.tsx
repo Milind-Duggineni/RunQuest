@@ -21,7 +21,7 @@ import { RootStackParamList } from '../navigation/types'; // Assuming you have t
 
 
 const { width, height } = Dimensions.get('window');
-const image = require('../../assets/Background.jpg'); // Replace with a specific sign-up background image
+const image = require('../assets/Background.jpg'); // Sign-up background image
 
 type SignUpScreenNavigationProp = StackNavigationProp<RootStackParamList, 'SignUp'>;
 

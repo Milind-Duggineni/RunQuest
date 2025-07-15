@@ -18,9 +18,9 @@ import { useAuth } from '../context/AuthContext'; // IMPT: Import useAuth
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 
-const backgroundImage = require('../../assets/Background.jpg');
+const image = require('../assets/Background.jpg'); // Background image for welcome screen
 // Using background image for all placeholders
-const DEFAULT_CHARACTER_IMAGE = backgroundImage;
+const DEFAULT_CHARACTER_IMAGE = image;
 
 
 // Defined a proper interface for Character data
@@ -142,8 +142,8 @@ const CharacterSelection = () => {
       console.log('Character Selected and Profile Updated:', selectedChar.name);
 
       // After character selection, navigate to the appropriate screen based on auth state
-      // Since this is part of the auth flow, we'll use the Dashboard route which leads to MainNavigator
-      navigation.replace('Dashboard'); // Changed to 'Dashboard' as per RootNavigator's decision logic
+      // Since this is part of the auth flow, we'll use the Main route which will handle the navigation
+      navigation.navigate('Main'); // Navigate to the MainNavigator which will handle the rest
 
     } catch (error: any) {
       console.error('Error during character selection and profile save:', error);
@@ -182,7 +182,7 @@ const CharacterSelection = () => {
   // PermissionItem component is correctly typed already.
 
   return (
-    <ImageBackground source={backgroundImage} style={styles.backgroundImage}>
+    <ImageBackground source={image} style={styles.background}>
       <SafeAreaView style={styles.container}>
         <ScrollView contentContainerStyle={styles.scrollContainer}>
           <Text style={styles.title}>Choose Your Character</Text>
@@ -262,7 +262,7 @@ const CharacterSelection = () => {
 };
 
 const styles = StyleSheet.create({
-  backgroundImage: {
+  background: {
     flex: 1,
     width: '100%',
   },

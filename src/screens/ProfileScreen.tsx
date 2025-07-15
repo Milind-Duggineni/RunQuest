@@ -21,16 +21,16 @@ import { useAuth, UserProfile } from '../context/AuthContext'; // IMPT: Import u
 const { width } = Dimensions.get('window');
 
 // --- IMPORTANT: REPLACE THESE WITH YOUR ACTUAL LOCAL ASSETS ---
-const PROFILE_BACKGROUND = require('../../assets/Background.jpg'); // e.g., a serene player home, a character portrait background
-const USER_ICON = require('../../assets/Background.jpg'); // Placeholder for user/profile icon
-const EMAIL_ICON = require('../../assets/Background.jpg'); // Placeholder for email icon
-const LOCK_ICON = require('../../assets/Background.jpg');   // Placeholder for lock/password icon
-const GOOGLE_FIT_ICON = require('../../assets/Background.jpg'); // Placeholder for Google Fit icon
-const APPLE_HEALTH_ICON = require('../../assets/Background.jpg'); // Placeholder for Apple Health icon
-const BELL_ICON = require('../../assets/Background.jpg');   // Placeholder for notification icon
-const LOCATION_ICON = require('../../assets/Background.jpg'); // Placeholder for location icon
-const LOGOUT_ICON = require('../../assets/Background.jpg'); // Placeholder for logout icon
-const DELETE_ICON = require('../../assets/Background.jpg'); // Placeholder for delete account icon
+const PROFILE_BACKGROUND = require('../assets/Background.jpg'); // Profile background image
+const USER_ICON = require('../assets/Background.jpg'); // User/profile icon
+const EMAIL_ICON = require('../assets/Background.jpg'); // Email icon
+const LOCK_ICON = require('../assets/Background.jpg'); // Lock/password icon
+const GOOGLE_FIT_ICON = require('../assets/Background.jpg'); // Google Fit icon
+const APPLE_HEALTH_ICON = require('../assets/Background.jpg'); // Apple Health icon
+const BELL_ICON = require('../assets/Background.jpg'); // Notification icon
+const LOCATION_ICON = require('../assets/Background.jpg'); // Location icon
+const LOGOUT_ICON = require('../assets/Background.jpg'); // Logout icon
+const DELETE_ICON = require('../assets/Background.jpg'); // Delete account icon
 
 const ProfileScreen: React.FC = () => {
   // Add a console log here to check if the component function is being called

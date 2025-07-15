@@ -19,17 +19,17 @@ import { EquippedItem as EquippedItemType } from '../types/dashboard'; // Import
 const { width } = Dimensions.get('window');
 
 // --- IMPORTANT: REPLACE THESE WITH YOUR ACTUAL LOCAL ASSETS ---
-const SHOP_BACKGROUND = require('../../assets/Background.jpg'); // e.g., a bustling market, a magical emporium interior
-const COIN_ICON = require('../../assets/Background.jpg');
-const XP_BOOST_POTION_ICON = require('../../assets/Background.jpg');
-const SPEED_BOOST_POTION_ICON = require('../../assets/Background.jpg');
-const SWORD_ICON = require('../../assets/Background.jpg');
-const ARMOR_ICON = require('../../assets/Background.jpg');
-const BOOTS_ICON = require('../../assets/Background.jpg');
-const RING_ICON = require('../../assets/Background.jpg');
-const GEM_PACK_ICON = require('../../assets/Background.jpg'); // Placeholder for a gem pack icon for premium currency
-const PREMIUM_CRATE_ICON = require('../../assets/Background.jpg');
-const COSMETIC_ICON = require('../../assets/Background.jpg');
+const SHOP_BACKGROUND = require('../assets/Background.jpg'); // Shop background image
+const COIN_ICON = require('../assets/Background.jpg');
+const XP_BOOST_POTION_ICON = require('../assets/Background.jpg');
+const SPEED_BOOST_POTION_ICON = require('../assets/Background.jpg');
+const SWORD_ICON = require('../assets/Background.jpg');
+const ARMOR_ICON = require('../assets/Background.jpg');
+const BOOTS_ICON = require('../assets/Background.jpg');
+const RING_ICON = require('../assets/Background.jpg');
+const GEM_PACK_ICON = require('../assets/Background.jpg'); // Gem pack icon for premium currency
+const PREMIUM_CRATE_ICON = require('../assets/Background.jpg');
+const COSMETIC_ICON = require('../assets/Background.jpg');
 
 // --- Interfaces for Shop Items ---
 interface StatBoosts {

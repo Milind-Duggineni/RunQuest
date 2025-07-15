@@ -36,9 +36,9 @@ const EquippedItem: React.FC<EquippedItemProps> = ({
 }) => {
   // Default item slot icons
   const slotIcons = {
-    Weapon: require('../../../assets/Background.jpg'),
-    Armor: require('../../../assets/Background.jpg'),
-    Boots: require('../../../assets/Background.jpg'),
+    Weapon: require('../../assets/Background.jpg'),
+    Armor: require('../../assets/Background.jpg'),
+    Boots: require('../../assets/Background.jpg'),
   };
 
   return (

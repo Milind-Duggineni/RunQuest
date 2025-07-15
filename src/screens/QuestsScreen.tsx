@@ -20,15 +20,15 @@ import { supabase } from '../lib/supabase'; // Import supabase instance
 const { width, height } = Dimensions.get('window');
 
 // --- IMPORTANT: REPLACE THESE WITH YOUR ACTUAL LOCAL ASSETS ---
-const QUEST_BACKGROUND = require('../../assets/Background.jpg'); // e.g., a map, a town square, or an adventurer's camp
-const REWARD_XP_ICON = require('../../assets/Background.jpg');
-const REWARD_HEALTH_ICON = require('../../assets/Background.jpg');
-const REWARD_STRENGTH_ICON = require('../../assets/Background.jpg');
-const REWARD_AGILITY_ICON = require('../../assets/Background.jpg');
-const REWARD_SPEED_ICON = require('../../assets/Background.jpg');
-const REWARD_COIN_ICON = require('../../assets/Background.jpg');
-const REWARD_GEAR_ICON = require('../../assets/Background.jpg');
-const REWARD_ITEM_PLACEHOLDER = require('../../assets/Background.jpg'); // For generic items
+const QUEST_BACKGROUND = require('../assets/Background.jpg'); // Quests background image
+const REWARD_XP_ICON = require('../assets/Background.jpg');
+const REWARD_HEALTH_ICON = require('../assets/Background.jpg');
+const REWARD_STRENGTH_ICON = require('../assets/Background.jpg');
+const REWARD_AGILITY_ICON = require('../assets/Background.jpg');
+const REWARD_SPEED_ICON = require('../assets/Background.jpg');
+const REWARD_COIN_ICON = require('../assets/Background.jpg');
+const REWARD_GEAR_ICON = require('../assets/Background.jpg');
+const REWARD_ITEM_PLACEHOLDER = require('../assets/Background.jpg'); // For generic items
 
 
 // Helper to get reward icon based on type (if not explicitly provided in stat_rewards)

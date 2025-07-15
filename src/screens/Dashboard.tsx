@@ -19,15 +19,15 @@ import EquippedItem from '../components/dashboard/EquippedItem';
 const { width } = Dimensions.get('window');
 
 // Using Background.jpg from the root assets directory as placeholders
-const PLACEHOLDER_IMAGE = require('../../assets/Background.jpg');
-const BACKGROUND_IMAGE = require('../../assets/Background.jpg');
+const PLACEHOLDER_IMAGE = require('../assets/Background.jpg');
+const BACKGROUND_IMAGE = require('../assets/Background.jpg');
 
 // Stat icons - IMPORTANT: Replace with actual assets (e.g., specific icons for health, strength etc.)
 const statIcons = {
-    health: require('../../assets/Background.jpg'), // e.g., require('../../assets/icons/health_icon.png')
-    strength: require('../../assets/Background.jpg'), // e.g., require('../../assets/icons/strength_icon.png')
-    agility: require('../../assets/Background.jpg'), // e.g., require('../../assets/icons/agility_icon.png')
-    speed: require('../../assets/Background.jpg'), // e.g., require('../../assets/icons/speed_icon.png')
+    health: require('../assets/Background.jpg'), // e.g., require('../../assets/icons/health_icon.png')
+    strength: require('../assets/Background.jpg'), // e.g., require('../../assets/icons/strength_icon.png')
+    agility: require('../assets/Background.jpg'), // e.g., require('../../assets/icons/agility_icon.png')
+    speed: require('../assets/Background.jpg'), // e.g., require('../../assets/icons/speed_icon.png')
 };
 
 const calculateXpProgress = (current: number, total: number) => {
@@ -230,6 +230,7 @@ const styles = StyleSheet.create({
         flex: 1,
         width: '100%',
         height: '100%',
+        resizeMode: 'cover',
     },
     scrollViewContent: {
         flexGrow: 1,

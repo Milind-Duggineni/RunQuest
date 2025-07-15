@@ -31,7 +31,7 @@ const PauseMenu: React.FC<PauseMenuProps> = ({
     <View style={styles.overlay}>
       <ImageBackground
         source={require('../../assets/menu-bg.png')} // Update with your background image
-        style={styles.backgroundImage}
+        style={styles.background}
         resizeMode="cover"
         blurRadius={10}
       >
@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  backgroundImage: {
+  background: {
     width: '100%',
     height: '100%',
     justifyContent: 'center',

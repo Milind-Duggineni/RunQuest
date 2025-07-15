@@ -31,7 +31,7 @@ const GameOverScreen: React.FC<GameOverScreenProps> = ({
     <View style={styles.overlay}>
       <ImageBackground
         source={require('../../assets/game-over-bg.jpg')} // Update with your background image
-        style={styles.backgroundImage}
+        style={styles.background}
         resizeMode="cover"
         blurRadius={5}
       >
@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     zIndex: 300,
   },
-  backgroundImage: {
+  background: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',

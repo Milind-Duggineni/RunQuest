@@ -22,6 +22,7 @@ const { width, height } = Dimensions.get('window');
 
 // FIX: This file is for SignIn, so export a SignIn component
 export default function SignIn({ navigation }: { navigation: any }) {
+  console.log('Rendering SignIn');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -53,8 +54,8 @@ export default function SignIn({ navigation }: { navigation: any }) {
           style={styles.gradient}
         >
           <ImageBackground
-            source={require('../../assets/Background.jpg')} // Replace with a specific sign-in background image
-            style={styles.backgroundImage}
+            source={require('../assets/Background.jpg')} // Sign-in background image
+            style={styles.background}
             resizeMode="cover"
           >
             <KeyboardAvoidingView
@@ -98,7 +99,7 @@ export default function SignIn({ navigation }: { navigation: any }) {
                       onPress={() => setShowPassword(!showPassword)}
                       style={styles.eyeButton}
                     >
-                      <Text style={styles.eyeIcon}>{showPassword ? '👁️' : '👁️‍🗨️'}</Text>
+                      <Text style={styles.eyeIcon}>{showPassword ? '\u{1F441}' : '\u{1F441}\u{FE0F}\u{200D}\u{1F5E8}'}</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -144,7 +145,7 @@ const styles = StyleSheet.create({
   gradient: {
     flex: 1,
   },
-  backgroundImage: {
+  background: {
     flex: 1,
     width: '100%',
     height: '100%',

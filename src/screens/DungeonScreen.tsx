@@ -20,16 +20,16 @@ const { width, height } = Dimensions.get('window');
 
 // --- IMPORTANT: REPLACE THESE WITH YOUR ACTUAL LOCAL ASSETS ---
 // Ensure your image files exist at these relative paths in your project.
-const DUNGEON_BACKGROUND = require('../../assets/Background.jpg'); // e.g., a dark, mystical landscape or cave entrance
-const REWARD_GOLD_ICON = require('../../assets/Background.jpg');    // e.g., gold coin icon
-const REWARD_GEAR_ICON = require('../../assets/Background.jpg');      // e.g., armor or weapon icon
-const REWARD_XP_ICON = require('../../assets/Background.jpg');        // e.g., a star or potion icon
+const DUNGEON_BACKGROUND = require('../assets/Background.jpg'); // Dungeon background image
+const REWARD_GOLD_ICON = require('../assets/Background.jpg'); // Gold coin icon
+const REWARD_GEAR_ICON = require('../assets/Background.jpg'); // Armor or weapon icon
+const REWARD_XP_ICON = require('../assets/Background.jpg'); // XP icon
 
 // Placeholder dungeon portal images (replace with unique art for each type)
-const DUNGEON_PORTAL_FIRE = require('../../assets/Background.jpg');     // Glowing lava portal
-const DUNGEON_PORTAL_ICE = require('../../assets/Background.jpg');       // Ancient ice gate
-const DUNGEON_PORTAL_SHADOW = require('../../assets/Background.jpg');   // Dark, shadowy gate
-const DUNGEON_PORTAL_VINE = require('../../assets/Background.jpg');     // Overgrown vine portal
+const DUNGEON_PORTAL_FIRE = require('../assets/Background.jpg'); // Glowing lava portal
+const DUNGEON_PORTAL_ICE = require('../assets/Background.jpg'); // Ancient ice gate
+const DUNGEON_PORTAL_SHADOW = require('../assets/Background.jpg'); // Dark, shadowy gate
+const DUNGEON_PORTAL_VINE = require('../assets/Background.jpg'); // Overgrown vine portal
 
 // Extend the Dungeon type for UI purposes
 interface UIDungeon extends Dungeon {

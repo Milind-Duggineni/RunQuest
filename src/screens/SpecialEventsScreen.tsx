@@ -19,14 +19,14 @@ import { LinearGradient } from 'expo-linear-gradient'; // Import LinearGradient 
 const { width, height } = Dimensions.get('window');
 
 // --- IMPORTANT: REPLACE THESE WITH YOUR ACTUAL LOCAL ASSETS ---
-const EVENT_BACKGROUND = require('../../assets/Background.jpg'); // e.g., an enchanted forest or glowing portal
-const BOSS_PORTRAIT = require('../../assets/Background.jpg'); // e.g., a dark entity with glowing eyes
-const CARD_PARCHMENT_BACKGROUND = require('../../assets/Background.jpg'); // New: Specific parchment for the card
+const EVENT_BACKGROUND = require('../assets/Background.jpg'); // e.g., an enchanted forest or glowing portal
+const BOSS_PORTRAIT = require('../assets/Background.jpg'); // e.g., a dark entity with glowing eyes
+const CARD_PARCHMENT_BACKGROUND = require('../assets/Background.jpg'); // New: Specific parchment for the card
 
 // Reward Icons (Re-used or specific to event)
-const REWARD_XP_ICON = require('../../assets/Background.jpg');
-const REWARD_LOOT_ICON = require('../../assets/Background.jpg'); // Unique loot icon for event
-const REWARD_COIN_ICON = require('../../assets/Background.jpg');
+const REWARD_XP_ICON = require('../assets/Background.jpg');
+const REWARD_LOOT_ICON = require('../assets/Background.jpg'); // Unique loot icon for event
+const REWARD_COIN_ICON = require('../assets/Background.jpg');
 
 
 // Utility to format time for countdown

@@ -204,6 +204,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [error, setError] = useState<string | null>(null);
   const [isInitialAuthProcessingComplete, setIsInitialAuthProcessingComplete] = useState<boolean>(false);
 
+  // Add auth state listener
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_, session) => {
+      console.log('Auth state changed:', session ? 'Authenticated' : 'Unauthenticated');
+      setSession(session);
+      if (session) {
+        const { data: { user } } = await supabase.auth.getUser();
+        setUser(user);
+        if (user) {
+          await fetchUserProfile(user.id);
+        }
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Initialize auth state
+  useEffect(() => {
+    console.log('AuthProvider: Initializing auth state');
+    const initializeAuth = async () => {
+      try {
+        const {
+          data: { session: initialSession },
+        } = await supabase.auth.getSession();
+        console.log('AuthProvider: Initial session:', initialSession ? 'Present' : 'Null');
+        setSession(initialSession);
+        
+        if (initialSession) {
+          const {
+            data: { user: initialUser },
+          } = await supabase.auth.getUser();
+          console.log('AuthProvider: Initial user:', initialUser ? 'Present' : 'Null');
+          setUser(initialUser);
+        }
+      } catch (error) {
+        console.error('AuthProvider: Initialization error:', error);
+        setError('Failed to initialize authentication');
+      } finally {
+        setIsAuthReady(true);
+        console.log('AuthProvider: Auth ready state set to true');
+      }
+    };
+
+    initializeAuth();
+  }, []);
+
   // Refs
   const isAssigningQuest = useRef<boolean>(false);
   const isInitialAuthProcessingCompleteRef = useRef<boolean>(false);
@@ -221,6 +268,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         Alert.alert('Sign In Error', errorMsg);
         return { success: false, error: errorMsg };
       }
+
+      // Update session and user state
+      setSession(data.session);
+      setUser(data.user);
+      
+      // Fetch user profile if it exists
+      if (data.user) {
+        await fetchUserProfile(data.user.id);
+      }
+
       console.log('AuthContext: User signed in successfully.');
       return { success: true };
     } catch (error: any) {
@@ -654,5 +711,6 @@ export const useAuth = () => {
   if (context === null) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
-  return context;
+
+  return context; // <-- return the real context, do NOT override
 };
