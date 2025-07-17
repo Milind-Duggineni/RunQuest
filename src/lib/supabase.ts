@@ -1,18 +1,35 @@
 // src/lib/supabase.ts
-
-// src/lib/supabase.ts
 import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
+import Constants from 'expo-constants';
 
-const supabaseUrl = 'https://cvfjzmcthrtwblqapjed.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN2Zmp6bWN0aHJ0d2JscWFwamVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAxMTQ5ODIsImV4cCI6MjA2NTY5MDk4Mn0.mIW8cYx_avtEAIveQg4PK1HUo_feXg7B-eiNo3XPQrE';
+// Get environment variables from app.config.js or process.env
+const { SUPABASE_URL, SUPABASE_ANON_KEY } = Constants.expoConfig?.extra || {
+  SUPABASE_URL: process.env.SUPABASE_URL,
+  SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
+};
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    storage: AsyncStorage,
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: false,
-  },
-});
+// Create a safe Supabase client that won't throw if not configured
+const createSafeClient = () => {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    console.warn('Supabase URL or Anon Key not found. Check your environment variables.');
+    return null;
+  }
+
+  try {
+    return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        storage: AsyncStorage,
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: false,
+      },
+    });
+  } catch (error) {
+    console.error('Failed to initialize Supabase:', error);
+    return null;
+  }
+};
+
+export const supabase = createSafeClient();

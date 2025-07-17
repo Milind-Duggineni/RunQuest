@@ -434,7 +434,6 @@ const styles = StyleSheet.create({
     borderRadius: 13,
     justifyContent: 'center',
     paddingHorizontal: 2,
-    transition: 'background-color 0.2s ease', // Added for potential web styling
   },
   toggleOn: {
     backgroundColor: '#4CAF50',
@@ -447,7 +446,6 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 11,
     backgroundColor: '#fff',
-    transition: 'transform 0.2s ease', // Added for potential web styling
   },
   toggleCircleOn: {
     transform: [{ translateX: 24 }], // Move to the right

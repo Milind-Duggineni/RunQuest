@@ -11,6 +11,19 @@ import ShadowfellCryptMap from '../components/ShadowfellCryptMap';
 import Warrior from '../components/Warrior';
 
 // Define the structure of the game entities
+// Define the map data interface
+interface MapData {
+    width: number;
+    height: number;
+    tileWidth: number;
+    tileHeight: number;
+    layers: {
+        data: number[];
+        width: number;
+        height: number;
+    }[];
+}
+
 type GameEntities = {
     physics: {
         engine: Matter.Engine;
@@ -26,6 +39,14 @@ type GameEntities = {
     controls: {
         left: boolean;
         right: boolean;
+    };
+    map: {
+        renderer: React.ComponentType<any>;
+        tileset: any;
+        mapData: MapData;
+        width: number;
+        height: number;
+        tileSize: number;
     };
     // You can add more entities here as your game grows (e.g., 'enemies': { ... })
 };
@@ -252,7 +273,17 @@ const Renderer = ({ entities }: { entities: GameEntities | null }) => {
                 ]}
             >
                 {/* Render the static dungeon map */}
-                <ShadowfellCryptMap />
+                {entities.map && (
+                    <entities.map.renderer
+                        key="dungeon-map"
+                        tileset={entities.map.tileset}
+                        mapData={entities.map.mapData}
+                        width={entities.map.width}
+                        height={entities.map.height}
+                        tileWidth={entities.map.tileSize}
+                        tileHeight={entities.map.tileSize}
+                    />
+                )}
 
                 {/* Render the Warrior character, positioned relative to the map's coordinate system */}
                 <Warrior
@@ -426,6 +457,21 @@ const ActiveDungeonInner: React.FC = () => {
                     throw new Error('Failed to create floor and walls.');
                 }
 
+                // Create a simple map data structure
+                const mapWidth = 40;
+                const mapHeight = 40;
+                const mapData: MapData = {
+                    width: mapWidth,
+                    height: mapHeight,
+                    tileWidth: TILE_SIZE,
+                    tileHeight: TILE_SIZE,
+                    layers: [{
+                        data: Array(mapWidth * mapHeight).fill(1), // Simple floor
+                        width: mapWidth,
+                        height: mapHeight
+                    }]
+                };
+
                 // 4. Construct the initial gameEntities object
                 const initializedGameEntities: GameEntities = {
                     physics: {
@@ -440,6 +486,15 @@ const ActiveDungeonInner: React.FC = () => {
                     },
                     controls: {
                         left: false, right: false
+                    },
+                    // Add the map entity with the ShadowfellCryptMap as its renderer
+                    map: {
+                        renderer: ShadowfellCryptMap,
+                        tileset: require('../assets/tilesets/ShadowfellCrypt.png'),
+                        mapData: mapData,
+                        width: mapWidth,
+                        height: mapHeight,
+                        tileSize: TILE_SIZE,
                     },
                 };
 
@@ -545,6 +600,7 @@ const ActiveDungeonInner: React.FC = () => {
             <View style={styles.gameContainer}>
                 {/* Conditionally render GameEngine ONLY when gameEntities is not null and gameEngineKey is set */}
                 {gameEntities && gameEngineKey !== null && (
+                    <View style={{flex: 1}}>
                     <GameEngine
                         key={gameEngineKey} // Use the key to force remount when it changes
                         systems={[Physics]}
@@ -552,6 +608,7 @@ const ActiveDungeonInner: React.FC = () => {
                         renderer={Renderer}
                         running={isActive}
                     />
+                </View>
                 )}
             </View>
 

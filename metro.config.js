@@ -1,39 +1,39 @@
 const { getDefaultConfig } = require('expo/metro-config');
 const { withNativeWind } = require('nativewind/metro');
-const path = require('path');
 
-// Get the default Metro config
-const config = getDefaultConfig(__dirname);
+function createConfig() {
+  const config = getDefaultConfig(__dirname);
+  const { transformer, resolver } = config;
 
-// Add support for TMJ files as JSON
-config.resolver.sourceExts = [...config.resolver.sourceExts, 'tmj'];
+  // Configure SVG transformer
+  config.transformer = {
+    ...transformer,
+    babelTransformerPath: require.resolve('react-native-svg-transformer'),
+    getTransformOptions: async () => ({
+      transform: {
+        experimentalImportSupport: false,
+        inlineRequires: true,
+      },
+    }),
+  };
 
-// Add asset extensions
-config.resolver.assetExts = [
-  ...config.resolver.assetExts,
-  'png',
-  'jpg',
-  'jpeg',
-  'gif',
-  'webp',
-];
+  // Configure resolver for SVG and TMJ files
+  config.resolver = {
+    ...resolver,
+    // Remove SVG from asset extensions (handled by transformer)
+    assetExts: resolver.assetExts.filter(ext => ext !== 'svg'),
+    // Add SVG and TMJ to source extensions
+    sourceExts: [...resolver.sourceExts, 'svg', 'tmj'],
+  };
 
-// Create a custom transformer that handles TMJ files as JSON
-config.transformer.getTransformOptions = async () => ({
-  transform: {
-    experimentalImportSupport: false,
-    inlineRequires: true,
-  },
-});
+  return config;
+}
 
-// Clear the asset cache
-config.cacheStores = [];
-config.resetCache = true;
-
-// Apply Nativewind with minimal configuration
-const nativeWindConfig = withNativeWind(config, {
+// Create and export the final config with NativeWind
+const config = createConfig();
+module.exports = withNativeWind(config, {
   input: './global.css',
   projectRoot: __dirname,
 });
 
-module.exports = nativeWindConfig;
+console.log('✅ Metro config loaded with SVG and NativeWind support');

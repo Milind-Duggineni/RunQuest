@@ -204,27 +204,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [error, setError] = useState<string | null>(null);
   const [isInitialAuthProcessingComplete, setIsInitialAuthProcessingComplete] = useState<boolean>(false);
 
-  // Add auth state listener
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_, session) => {
-      console.log('Auth state changed:', session ? 'Authenticated' : 'Unauthenticated');
-      setSession(session);
-      if (session) {
-        const { data: { user } } = await supabase.auth.getUser();
+// In AuthContext.tsx, update the auth state listener effect
+useEffect(() => {
+  if (!supabase) {
+    console.warn('Supabase client not initialized');
+    setIsAuthReady(true);
+    return () => {}; // Return empty cleanup function
+  }
+
+  const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_, session) => {
+    console.log('Auth state changed:', session ? 'Authenticated' : 'Unauthenticated');
+    setSession(session);
+    if (session) {
+      try {
+        if (!supabase) {
+          throw new Error('Supabase client not initialized');
+        }
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (error) throw error;
         setUser(user);
         if (user) {
           await fetchUserProfile(user.id);
         }
+      } catch (error) {
+        console.error('Error getting user:', error);
       }
-    });
+    }
+  });
 
-    return () => subscription.unsubscribe();
-  }, []);
+  return () => {
+    subscription?.unsubscribe();
+  };
+}, []);
 
   // Initialize auth state
   useEffect(() => {
     console.log('AuthProvider: Initializing auth state');
     const initializeAuth = async () => {
+      if (!supabase) {
+        console.warn('Supabase client not initialized');
+        setIsAuthReady(true);
+        return;
+      }
+      
       try {
         const {
           data: { session: initialSession },
@@ -262,6 +284,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signIn = useCallback(async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     setIsLoading(true);
     try {
+      if (!supabase) {
+        return { success: false, error: 'Supabase client not initialized' };
+      }
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         const errorMsg = error.message || 'Failed to sign in';
@@ -293,6 +318,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signUp = useCallback(async (email: string, password: string, username: string): Promise<{ success: boolean; error?: string; data?: { user: User; session: Session } }> => {
     setIsLoading(true);
     try {
+      if (!supabase) {
+        return { success: false, error: 'Supabase client not initialized' };
+      }
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -353,6 +381,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
     setIsLoading(true);
     try {
+      if (!supabase) {
+        return { success: false, error: 'Supabase client not initialized' };
+      }
       const { error } = await supabase.auth.signOut();
       if (error) {
         console.error('AuthContext: Sign Out Error:', error.message);
@@ -379,6 +410,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const fetchUserProfile = useCallback(async (userId: string): Promise<void> => {
     setIsLoading(true);
     try {
+      if (!supabase) {
+        throw new Error('Supabase client not initialized');
+      }
+      
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -414,6 +449,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!user) {
       return { success: false, error: 'User not authenticated' };
     }
+    if (!supabase) {
+      return { success: false, error: 'Supabase client not initialized' };
+    }
 
     setIsLoading(true);
     try {
@@ -441,6 +479,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const assignInitialQuest = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
     if (!user) {
       return { success: false, error: 'User not authenticated' };
+    }
+    if (!supabase) {
+      return { success: false, error: 'Supabase client not initialized' };
     }
 
     if (isAssigningQuest.current) {
@@ -507,6 +548,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     userQuestId: string,
     questDetails: QuestData
   ): Promise<{ success: boolean; error?: string }> => {
+    if (!supabase) {
+      return { success: false, error: 'Supabase client not initialized' };
+    }
+    
     if (!user || !userProfile) {
       return { success: false, error: 'User not authenticated' };
     }
@@ -562,6 +607,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Add stubs for other required functions to satisfy TypeScript
   const fetchActiveQuest = useCallback(async (): Promise<UserQuestProgress | null> => {
     if (!user) return null;
+    if (!supabase) {
+      console.warn('Supabase client not initialized');
+      return null;
+    }
+    
     try {
       const { data } = await supabase
         .from('user_quests')
@@ -580,6 +630,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     userQuestId: string, 
     progress: number
   ): Promise<{ success: boolean; error?: string }> => {
+    if (!supabase) {
+      return { success: false, error: 'Supabase client not initialized' };
+    }
+    
     try {
       const { error } = await supabase
         .from('user_quests')
@@ -600,6 +654,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }> => {
     if (!user) return { data: null, error: 'User not authenticated' };
     
+    if (!supabase) {
+      return { data: null, error: 'Supabase client not initialized' };
+    }
+    
     try {
       const { data, error } = await supabase
         .from('user_dungeons')
@@ -619,6 +677,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     userDungeonId: string,
     dungeonDetails: DungeonData
   ): Promise<{ success: boolean; error?: string }> => {
+    if (!supabase) {
+      return { success: false, error: 'Supabase client not initialized' };
+    }
+    
     if (!user || !userProfile) {
       return { success: false, error: 'User not authenticated' };
     }

@@ -1,34 +1,19 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { View, StyleSheet, Text, ActivityIndicator, Dimensions, Platform } from 'react-native';
-import { Canvas, useImage, Image as SkiaImage, type DataSourceParam, type SkImage } from '@shopify/react-native-skia';
+import { View, StyleSheet, Text, ActivityIndicator, Dimensions, Platform, Image } from 'react-native';
+import { Canvas, useImage, Image as SkiaImage, Group, type DataSourceParam, type SkImage } from '@shopify/react-native-skia';
+import * as FileSystem from 'expo-file-system';
+import { Asset } from 'expo-asset';
 
-// Define interfaces
-interface Tile {
-  id: number;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  srcX: number;
-  srcY: number;
-}
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
-interface TilesetInfo {
-  width: number;
-  height: number;
-  columns: number;
-  rows: number;
-}
-
-// Define styles outside the component to avoid recreation
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000000',
     overflow: 'hidden',
   },
-  canvas: {
-    flex: 1,
+  canvasContainer: {
+    position: 'relative',
   },
   loadingContainer: {
     flex: 1,
@@ -57,21 +42,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     fontWeight: 'bold',
   },
-  debugInfo: {
-    position: 'absolute',
-    top: 10,
-    left: 10,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    padding: 10,
-    borderRadius: 5,
-    maxWidth: '90%',
-  },
-  debugText: {
-    color: '#ffffff',
-    fontSize: 12,
-    marginVertical: 2,
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-  },
   debugOverlay: {
     position: 'absolute',
     top: 10,
@@ -96,304 +66,292 @@ interface MapData {
   [key: string]: any;
 }
 
+type TilesetSource = number | { uri: string; width: number; height: number } | string;
+
 interface MapRendererProps {
   mapData: MapData;
-  playerPosition: { x: number; y: number };
-  tileset: DataSourceParam | { uri: string } | { default: DataSourceParam };
-  screenWidth?: number;
-  screenHeight?: number;
+  tileset: TilesetSource;
   tileWidth?: number;
   tileHeight?: number;
+  playerPosition: { x: number; y: number };
+  x?: number;
+  y?: number;
   debug?: boolean;
   onError?: (error: string) => void;
   onLoadingStateChange?: (isLoading: boolean) => void;
-  tilesetImageWidth?: number;
-  tilesetImageHeight?: number;
 }
 
 const MapRenderer: React.FC<MapRendererProps> = ({
   mapData,
-  playerPosition = { x: 0, y: 0 },
   tileset,
-  screenWidth: propScreenWidth,
-  screenHeight: propScreenHeight,
   tileWidth = 32,
   tileHeight = 32,
-  tilesetImageWidth = 256,
-  tilesetImageHeight = 256,
+  playerPosition,
   debug = false,
   onError,
   onLoadingStateChange,
 }) => {
-  // State management
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [tilesetLoaded, setTilesetLoaded] = useState(false);
-  const [tilesetInfo, setTilesetInfo] = useState<TilesetInfo | null>(null);
-  
-  // Get screen dimensions using React Native's Dimensions API
-  const { width: windowWidth, height: windowHeight } = Dimensions.get('window');
-  const screenWidth = propScreenWidth ?? windowWidth;
-  const screenHeight = propScreenHeight ?? windowHeight;
 
-  // Handle different types of tileset sources with proper type checking
-  const tilesetSource = useMemo<DataSourceParam>(() => {
-    try {
-      // Handle string or number sources
-      if (typeof tileset === 'string' || typeof tileset === 'number') {
-        return tileset;
+  console.log('=== TILESET LOADING DEBUG ===');
+  console.log('Tileset source type:', typeof tileset);
+  
+  const [tilesetImage, setTilesetImage] = useState<ReturnType<typeof useImage> | null>(null);
+  const [loadingMethod, setLoadingMethod] = useState<string>('none');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Method 1: Try direct require first
+  useEffect(() => {
+    const loadImage = async () => {
+      if (!tileset) {
+        setErrorMsg('No tileset provided');
+        return;
       }
-      
-      // Handle object sources
-      if (tileset && typeof tileset === 'object') {
-        // Handle ESModule default import
-        if ('default' in tileset) {
-          const tilesetWithDefault = tileset as { default: DataSourceParam };
-          const defaultImport = tilesetWithDefault.default;
-          if (typeof defaultImport === 'string' || typeof defaultImport === 'number') {
-            return defaultImport;
+
+      try {
+        // Method 1: Handle number (direct require)
+        if (typeof tileset === 'number') {
+          console.log('🔄 Method 1: Handling direct require...');
+          const source = Image.resolveAssetSource(tileset);
+          console.log('🔹 Direct source:', JSON.stringify(source, null, 2));
+          
+          if (source?.uri) {
+            const img = useImage(source.uri);
+            if (img) {
+              console.log('✅ Success with direct require');
+              setTilesetImage(img);
+              setLoadingMethod('direct');
+              return;
+            }
           }
         }
-        // Handle URI objects
-        if ('uri' in tileset) {
-          const tilesetWithUri = tileset as { uri: string };
-          return tilesetWithUri.uri;
+
+        // Method 2: Handle string URI
+        if (typeof tileset === 'string') {
+          console.log('🔄 Method 2: Handling string URI...');
+          try {
+            const img = useImage(tileset);
+            if (img) {
+              console.log('✅ Success with string URI');
+              setTilesetImage(img);
+              setLoadingMethod('string-uri');
+              return;
+            }
+          } catch (e) {
+            console.warn('String URI method failed:', e);
+          }
         }
+
+        // Method 3: Try with expo-asset for complex objects
+        console.log('🔄 Method 3: Trying expo-asset...');
+        try {
+          const asset = typeof tileset === 'object' && 'uri' in tileset 
+            ? Asset.fromURI(tileset.uri) 
+            : Asset.fromModule(tileset as any);
+            
+          await asset.downloadAsync();
+          console.log('🔹 Expo asset:', JSON.stringify(asset, null, 2));
+          
+          if (asset.localUri || asset.uri) {
+            const img = useImage(asset.localUri || asset.uri);
+            if (img) {
+              console.log('✅ Success with expo-asset');
+              setTilesetImage(img);
+              setLoadingMethod('expo-asset');
+              return;
+            }
+          }
+        } catch (e) {
+          console.warn('expo-asset method failed:', e);
+        }
+
+        // Method 3: Try with file system
+        console.log('🔄 Method 3: Trying file system...');
+        try {
+          const asset = Asset.fromModule(tileset);
+          await asset.downloadAsync();
+          
+          if (asset.localUri) {
+            const fileInfo = await FileSystem.getInfoAsync(asset.localUri);
+            if (fileInfo.exists) {
+              const img = useImage(asset.localUri);
+              if (img) {
+                console.log('✅ Success with file system');
+                setTilesetImage(img);
+                setLoadingMethod('file-system');
+                return;
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('File system method failed:', e);
+        }
+
+        // If all methods failed
+        setErrorMsg('All loading methods failed');
+        console.error('❌ All image loading methods failed');
+      } catch (error) {
+        console.error('❌ Error in image loading:', error);
+        setErrorMsg(error instanceof Error ? error.message : 'Unknown error');
       }
-      
-      throw new Error('Unsupported tileset format');
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Failed to process tileset source';
-      console.warn(errorMsg, tileset);
-      onError?.(errorMsg);
-      return '';
-    }
-  }, [tileset, onError]);
+    };
 
-  // Load the tileset image
-  const tilesetImage: SkImage | null = useImage(tilesetSource);
+    loadImage();
+  }, [tileset]);
 
-  // Handle tileset image loading and processing
+  // Debug effect to log when tilesetImage changes
   useEffect(() => {
     if (tilesetImage) {
-      console.log('Tileset image loaded successfully');
-
-      const columns = Math.floor(tilesetImageWidth / tileWidth);
-      const rows = Math.floor(tilesetImageHeight / tileHeight);
-
-      setTilesetInfo({
-        width: tilesetImageWidth,
-        height: tilesetImageHeight,
-        columns,
-        rows,
+      console.log('🎉 Tileset loaded successfully via', loadingMethod);
+      console.log('Image dimensions:', {
+        width: tilesetImage.width(),
+        height: tilesetImage.height()
       });
-
-      console.log(`Tileset info: ${columns}x${rows} tiles (${tileWidth}x${tileHeight} each)`);
-
-      setTilesetLoaded(true);
-      setError(null);
-      setIsLoading(false);
-      onLoadingStateChange?.(false);
-    } else if (tilesetImage === null) {
-      const errorMsg = 'Failed to load tileset image: Image is null or invalid';
-      console.error(errorMsg);
-      setError(errorMsg);
-      setTilesetLoaded(false);
-      setIsLoading(false);
-      onError?.(errorMsg);
-      onLoadingStateChange?.(false);
-    } else {
-      console.log('Tileset still loading...');
-      setIsLoading(true);
-      onLoadingStateChange?.(true);
     }
-  }, [tilesetImage, tileWidth, tileHeight, tilesetImageWidth, tilesetImageHeight, onError, onLoadingStateChange]);
+  }, [tilesetImage, loadingMethod]);
 
+  // Notify loading state changes
   useEffect(() => {
-    console.log('Tileset image state changed:', {
-      hasImage: !!tilesetImage,
-      isLoading,
-      tilesetLoaded,
-      error,
-    });
-
-    if (tilesetImage) {
-      console.log('Tileset loaded successfully');
-      setTilesetLoaded(true);
-      setError(null);
-      setIsLoading(false);
-      onLoadingStateChange?.(false);
-    } else if (tilesetImage === null) {
-      if (!error) {
-        const errorMsg = 'Failed to load tileset image: Image is null';
-        console.error(errorMsg);
-        setError(errorMsg);
-        onError?.(errorMsg);
-      }
-      setTilesetLoaded(false);
-      setIsLoading(false);
-      onLoadingStateChange?.(false);
-    } else {
-      console.log('Tileset still loading...');
-      setIsLoading(true);
-      onLoadingStateChange?.(true);
+    if (!tileset) {
+      const msg = 'Tileset source is not provided';
+      setError(msg);
+      if (onError) onError(msg);
+      if (onLoadingStateChange) onLoadingStateChange(false);
+      return;
     }
-  }, [
-    tilesetImage, 
-    tileWidth, 
-    tileHeight, 
-    tilesetImageWidth, 
-    tilesetImageHeight, 
-    onError, 
-    onLoadingStateChange
-  ]);
+    
+    if (errorMsg) {
+      setError(errorMsg);
+      if (onError) onError(errorMsg);
+      if (onLoadingStateChange) onLoadingStateChange(false);
+      return;
+    }
+    
+    if (!tilesetImage) {
+      if (onLoadingStateChange) onLoadingStateChange(true);
+      return;
+    }
+    
+    setError(null);
+    if (onLoadingStateChange) onLoadingStateChange(false);
+  }, [tileset, tilesetImage, errorMsg, onError, onLoadingStateChange]);
 
-  if (isLoading) {
+  // Validate required props early return
+  if (!tileset || !mapData?.layers) {
+    const errorMsg = 'Missing required props: tileset or mapData';
+    if (!error) setError(errorMsg);
     return (
-      <View style={[styles.loadingContainer, { width: screenWidth, height: screenHeight }]}>
-        <ActivityIndicator size="large" color="#ffffff" />
-        <Text style={styles.loadingText}>Loading map resources...</Text>
-        {__DEV__ && (
-          <View style={styles.debugInfo}>
-            <Text style={styles.debugText}>
-              Tileset: {typeof tileset === 'string' ? tileset : 'Image object'}
-            </Text>
-            <Text style={styles.debugText}>
-              Tile size: {tileWidth}x{tileHeight}
-            </Text>
-            {tilesetInfo && (
-              <Text style={styles.debugText}>
-                Tileset: {tilesetInfo.width}x{tilesetInfo.height} ({tilesetInfo.columns}x{tilesetInfo.rows} tiles)
-              </Text>
-            )}
-          </View>
-        )}
+      <View style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{errorMsg}</Text>
+        </View>
       </View>
     );
   }
 
-  // Calculate visible tiles
-  const visibleTiles = useMemo<Tile[]>(() => {
-    if (!tilesetInfo) return [];
-    
-    const tiles: Tile[] = [];
-    const { columns, rows } = tilesetInfo;
-    
-    for (let y = 0; y < rows; y++) {
-      for (let x = 0; x < columns; x++) {
-        const tileId = y * columns + x + 1;
-        tiles.push({
-          id: tileId,
-          x: x * tileWidth,
-          y: y * tileHeight,
-          width: tileWidth,
-          height: tileHeight,
-          srcX: (tileId - 1) % columns * tileWidth,
-          srcY: Math.floor((tileId - 1) / columns) * tileHeight,
-        });
-      }
-    }
-    
-    return tiles;
-  }, [tilesetInfo, tileWidth, tileHeight]);
+  // Calculate viewport bounds based on player position
+  const viewportWidth = screenWidth;
+  const viewportHeight = screenHeight;
+  const viewportX = playerPosition.x - viewportWidth / 2;
+  const viewportY = playerPosition.y - viewportHeight / 2;
 
-  // Show loading state if tileset isn't ready
-  if (isLoading) {
+  // Calculate visible tile bounds
+  const colMin = Math.floor(viewportX / tileWidth);
+  const colMax = Math.ceil((viewportX + viewportWidth) / tileWidth);
+  const rowMin = Math.floor(viewportY / tileHeight);
+  const rowMax = Math.ceil((viewportY + viewportHeight) / tileHeight);
+
+  // Calculate tileset info once loaded
+  const tilesetInfo = useMemo(() => {
+    if (!tilesetImage) return null;
+    const columns = Math.floor(Number(tilesetImage.width) / tileWidth);
+    const rows = Math.floor(Number(tilesetImage.height) / tileHeight);
+    return { image: tilesetImage as SkImage, columns, rows };
+  }, [tilesetImage, tileWidth, tileHeight]);
+
+  // Calculate visible map tiles (with viewport culling)
+  const mapTiles = useMemo(() => {
+    if (!mapData.layers?.length || !tilesetInfo) return [];
+    const { columns } = tilesetInfo;
+    const layer = mapData.layers.find((l: any) => l.type === 'tilelayer');
+    if (!layer) return [];
+
+    const cols = mapData.width ?? 0;
+    if (cols === 0) return [];
+
+    return layer.data
+      .map((tileId: number, index: number) => {
+        if (tileId <= 0) return null;
+
+        const sx = ((tileId - 1) % columns) * tileWidth;
+        const sy = Math.floor((tileId - 1) / columns) * tileHeight;
+        const x = (index % cols) * tileWidth;
+        const y = Math.floor(index / cols) * tileHeight;
+
+        const col = x / tileWidth;
+        const row = y / tileHeight;
+
+        if (col < colMin || col >= colMax || row < rowMin || row >= rowMax) return null;
+
+        return { tileId, sx, sy, x, y };
+      })
+      .filter((tile): tile is { tileId: number; sx: number; sy: number; x: number; y: number } => tile !== null);
+  }, [mapData, tilesetInfo, tileWidth, tileHeight, colMin, colMax, rowMin, rowMax]);
+
+  if (error) {
     return (
-      <View style={[styles.loadingContainer, { width: screenWidth, height: screenHeight }]}>
-        <ActivityIndicator size="large" color="#ffffff" />
-        <Text style={styles.loadingText}>Loading map resources...</Text>
-        {__DEV__ && tilesetInfo && (
-          <View style={styles.debugInfo}>
-            <Text style={styles.debugText}>
-              Tileset: {tilesetInfo.width}x{tilesetInfo.height}
-            </Text>
-            <Text style={styles.debugText}>
-              Tiles: {tilesetInfo.columns}x{tilesetInfo.rows}
-            </Text>
-            <Text style={styles.debugText}>
-              Tile size: {tileWidth}x{tileHeight}
-            </Text>
-          </View>
-        )}
+      <View style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+          <Text style={styles.loadingText}>Please check the console for more details.</Text>
+        </View>
       </View>
     );
   }
 
-  if (error || !tilesetLoaded) {
+  if (!tilesetImage) {
     return (
-      <View style={[styles.errorContainer, { width: screenWidth, height: screenHeight }]}>
-        <Text style={styles.errorText}>
-          {error || 'Failed to load tileset'}
-        </Text>
-        {__DEV__ && (
-          <View style={styles.debugInfo}>
-            <Text style={styles.debugText}>
-              Tileset source: {typeof tileset === 'string' ? tileset : 'Image object'}
-            </Text>
-            {tilesetInfo && (
-              <Text style={styles.debugText}>
-                Tileset: {tilesetInfo.width}x{tilesetInfo.height}
-              </Text>
-            )}
-          </View>
-        )}
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#ffffff" />
+        <Text style={styles.loadingText}>Loading tileset...</Text>
       </View>
     );
   }
 
   return (
     <View style={[styles.container, { width: screenWidth, height: screenHeight }]}>
-      <Canvas style={styles.canvas}>
-        {tilesetImage && visibleTiles.map((tile) => (
-          <SkiaImage
-            key={`tile-${tile.id}`}
-            image={tilesetImage as SkImage}
-            x={tile.x}
-            y={tile.y}
-            width={tile.width}
-            height={tile.height}
-            rect={{
-              x: tile.srcX,
-              y: tile.srcY,
-              width: tileWidth,
-              height: tileHeight,
-            }}
-          />
-        ))}
-        {debug && tilesetImage && (
-          <SkiaImage
-            image={tilesetImage as SkImage}
-            x={0}
-            y={0}
-            width={tileWidth}
-            height={tileHeight}
-            rect={{
-              x: 0,
-              y: 0,
-              width: tileWidth,
-              height: tileHeight,
-            }}
-          />
-        )}
-      </Canvas>
-      {debug && tilesetInfo && (
-        <View style={styles.debugOverlay} pointerEvents="none">
-          <Text style={styles.debugText}>
-            Tileset: {tilesetInfo.width}x{tilesetInfo.height}
-          </Text>
-          <Text style={styles.debugText}>
-            Tiles: {tilesetInfo.columns}x{tilesetInfo.rows}
-          </Text>
-          <Text style={styles.debugText}>
-            Player: {Math.round(playerPosition.x)}, {Math.round(playerPosition.y)}
-          </Text>
-        </View>
+      <View
+        style={[
+          styles.canvasContainer,
+          {
+            width: mapData.width ? mapData.width * tileWidth : screenWidth,
+            height: mapData.height ? mapData.height * tileHeight : screenHeight,
+          },
+        ]}
+      >
+        <Canvas style={{ flex: 1 }}>
+          <Group>
+            {mapTiles.map(({ tileId, sx, sy, x, y }) => (
+              <SkiaImage
+                key={`tile-${x}-${y}`}
+                image={tilesetImage}
+                x={x}
+                y={y}
+                width={tileWidth}
+                height={tileHeight}
+                rect={{ x: sx, y: sy, width: tileWidth, height: tileHeight }}
+              />
+            ))}
+          </Group>
+        </Canvas>
+      </View>
+      {debug && (
+        <Text style={styles.debugOverlay}>
+          Map: {mapData.width}×{mapData.height} | Tiles: {mapTiles.length}
+        </Text>
       )}
     </View>
   );
 };
-
-
 
 export default MapRenderer;

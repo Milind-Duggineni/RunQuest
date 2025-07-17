@@ -36,7 +36,7 @@ import { useImage } from '@shopify/react-native-skia';
 // Import game systems and components
 import Physics from '../game/systems/Physics'; // Assuming Physics system is defined here
 import PedometerMovement from '../game/systems/PedometerMovement'; // Assuming PedometerMovement system is defined here
-import MapRenderer from '../game/components/MapRenderer';
+import ShadowfellCryptMap from '../components/ShadowfellCryptMap';
 import RedDotPlayer from '../game/components/RedDotPlayer'; // Corrected casing
 import { GameEntities, GameEvent, GameEngineContext } from '../game/types/game';
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -398,50 +398,26 @@ const DungeonGameScreen: React.FC = () => {
               },
             ]}
           >
-            <MapRenderer
+            <ShadowfellCryptMap
+              tileset={require('../assets/catacombs_tileset.png')}
               mapData={{
-                tilewidth: map.tileSize || 32,
-                tileheight: map.tileSize || 32,
                 width: map.widthInTiles || 20,
                 height: map.heightInTiles || 15,
+                tileWidth: map.tileSize || 32,
+                tileHeight: map.tileSize || 32,
                 layers: map.layers || [{
                   data: map.tiles || [],
                   width: map.widthInTiles || 20,
-                  height: map.heightInTiles || 15,
-                  type: 'tilelayer',
-                  name: 'ground',
-                  opacity: 1,
-                  visible: true,
-                  x: 0,
-                  y: 0
-                }],
-                tilesets: [{
-                  firstgid: 1,
-                  columns: 8, // cs-blue-00f.png has 8 columns
-                  tilewidth: 32, // Standard tile size
-                  tileheight: 32, // Standard tile size
-                  image: 'cs-blue-00f',
-                  imagewidth: 256, // 8 tiles * 32px = 256px
-                  imageheight: 256, // 8 tiles * 32px = 256px
-                  margin: 0,
-                  spacing: 0
+                  height: map.heightInTiles || 15
                 }]
               }}
-              tileset={require('../assets/cs-blue-00f.png')}
-              onError={handleTilesetError}
               playerPosition={playerPosition}
-              screenWidth={SCREEN_WIDTH}
-              screenHeight={SCREEN_HEIGHT}
-              debug={__DEV__}
-              onLoadingStateChange={(isLoading) => {
-                console.log('MapRenderer loading state:', isLoading);
-                setIsTilesetLoaded(!isLoading);
+              onError={(error: string) => {
+                console.error('Map error:', error);
+                handleTilesetError(error);
               }}
-              // Add a key to force remount if the image changes
-              key={`map-${DungeonTilesetImage}`}
-              // Explicitly set the image dimensions if known
-              tileWidth={32}
-              tileHeight={32}
+              width={SCREEN_WIDTH}
+              height={SCREEN_HEIGHT}
             />
   
             {gameEntities?.player?.body?.position && (
@@ -480,12 +456,12 @@ const DungeonGameScreen: React.FC = () => {
     );
   }
 
-  // Add loading state if entities aren't ready or tileset is still loading
-  if (!gameEntities || !isTilesetLoaded) {
+  // Add loading state if entities aren't ready
+  if (!gameEntities) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: '#1a1a1a' }]}>
         <Text style={styles.loadingText}>
-          {!gameEntities ? 'Initializing game world...' : 'Loading tileset...'}
+          Initializing game world...
         </Text>
         <ActivityIndicator size="large" color="#ffffff" style={{ marginTop: 20 }} />
       </View>
